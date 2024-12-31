@@ -1,0 +1,101 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ownconfigmap
+  labels:
+    app: app_task1
+  annotations:
+    description: "ConfigMap attach the name of variable"
+data:
+  name: mahabubrishad
+  
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configmap-deployment
+  labels:
+    app: app_task1
+  annotations:
+    description: "Deployment consuming ConfigMap with a single container"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app_task1
+  template:
+    metadata:
+      labels:
+        app: app_task1
+    spec:
+      containers:
+      - name: configmap-container
+        image: alpine:latest
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+        env:
+        - name: CONFIG_PATH
+          value: /config/name
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          while true; do
+            sleep 3600;
+          done;
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+          readOnly: true
+      volumes:
+      - name: config-volume
+        configMap:
+          name: ownconfigmap
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shared-empty-dir
+  labels:
+    app: shared-empty-dir-task
+  annotations:
+    description: "Deployment with 3 containers sharing an emptyDir volume"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shared-empty-dir-task
+  template:
+    metadata:
+      labels:
+        app: shared-empty-dir-task
+    spec:
+      volumes:
+      - name: shared-storage
+        emptyDir: {}
+      containers:
+      - name: container1
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args: ["sleep 3600"]
+        volumeMounts:
+        - name: shared-storage
+          mountPath: /shared-data
+      - name: container2
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args: ["sleep 3600"]
+        volumeMounts:
+        - name: shared-storage
+          mountPath: /shared-data
+      - name: container3
+        image: alpine:latest
+        command: ["/bin/sh", "-c"]
+        args: ["sleep 3600"]
+        volumeMounts:
+        - name: shared-storage
+          mountPath: /shared-data

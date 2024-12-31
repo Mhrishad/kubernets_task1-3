@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ownconfigmap
+  labels:
+    app: app_task1
+  annotations:
+    description: "ConfigMap attach the name of variable"
+data:
+  name: mahabubrishad
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment
+  labels:
+    app: app_task1
+  annotations:
+    description: "Deployment to echo ConfigMap value in a loop"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app_task1
+  template:
+    metadata:
+      labels:
+        app: app_task1
+    spec:
+      containers:
+      - name: echo-container
+        image: alpine:latest
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+        env:
+        - name: CONFIG_PATH
+          value: /config/name
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          while true; do
+            if [ -f "$CONFIG_PATH" ]; then
+              echo "$(cat $CONFIG_PATH)";
+            else
+              echo "ConfigMap file not found";
+            fi;
+            sleep 5;
+          done;
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+          readOnly: true
+      volumes:
+      - name: config-volume
+        configMap:
+          name: ownconfigmap
